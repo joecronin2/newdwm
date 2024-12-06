@@ -2,6 +2,7 @@
 
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
+static const unsigned int gappx     = 5;        /* gaps between windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
@@ -19,7 +20,7 @@ static const char *colors[][3]      = {
 };
 
 /* tagging */
-static const char *tags[] = { "&", "(", "{", "*", ">", ";", ",", ".", "p", "y" };
+static const char *tags[] = { "=", "(", "{", "*", ">", ";", ",", ".", "p", "y" };
 
 static const Rule rules[] = {
 	/* xprop(1):
@@ -49,9 +50,9 @@ static const Layout layouts[] = {
 #define SUPERKEY Mod4Mask
 #define TAGKEYS(KEY,TAG) \
 	{ ControlMask,                       KEY,      view,           {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
-	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
+	{ MODKEY|ShiftMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
+	{ MODKEY|ControlMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
+	{ SUPERKEY|ControlMask, KEY,      toggletag,      {.ui = 1 << TAG} },
 
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
@@ -69,6 +70,9 @@ static const Key keys[] = {
 	{ SUPERKEY,                     XK_j,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+") },
 	{ MODKEY, XK_q, spawn, SHCMD ("rofi -show calc -modi calc -no-show-match -no-sort") },
 	{ MODKEY|ControlMask,           XK_u,      spawn,          { .v = browser_cmd } },
+	{ MODKEY,                       XK_minus,  setgaps,        {.i = -1 } },
+	{ MODKEY,                       XK_equal,  setgaps,        {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_equal,  setgaps,        {.i = 0  } },
 
 	{ MODKEY,                       XK_p,      spawn,          {.v = rofi_cmd } },
 	{ ControlMask,								 	XK_dollar, spawn,          {.v = termcmd } },
@@ -93,7 +97,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
-	TAGKEYS(                        XK_ampersand,              0)
+	TAGKEYS(                        XK_equal,                  0)
 	TAGKEYS(                        XK_parenleft,              1)
 	TAGKEYS(                        XK_braceleft,              2)
 	TAGKEYS(                        XK_asterisk,               3)
