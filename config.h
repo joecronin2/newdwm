@@ -74,6 +74,11 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_minus,  setgaps,        {.i = -1 } },
 	{ MODKEY,                       XK_equal,  setgaps,        {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_equal,  setgaps,        {.i = 0  } },
+	{ MODKEY|ShiftMask|ControlMask, XK_t,      trippy,         { 0 } },
+	{ MODKEY|ControlMask, 					XK_o,      adjust_temperature,       {.i = 50 } },
+	{ MODKEY|ControlMask, 					XK_a, 		 adjust_temperature, { .i = -(50) } },
+  { MODKEY|ControlMask|ShiftMask, XK_o, 		 adjust_brightness, { .i = 3 } },
+  { MODKEY|ControlMask|ShiftMask, XK_a, 		 adjust_brightness, { .i = -(3) } },
 
 	{ MODKEY,                       XK_p,      spawn,          {.v = rofi_cmd } },
 	{ ControlMask,								 	XK_dollar, spawn,          {.v = termcmd } },
