@@ -6,7 +6,8 @@ static const unsigned int gappx     = 5;        /* gaps between windows */
 static const unsigned int snap      = 32;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]          = { "monospace:size=10" };
+static const char *fonts[] 					= { "0xProto Nerd Font:size=10" };
+/*static const char *fonts[]          = { "monospace:size=10" };*/
 static const char dmenufont[]       = "monospace:size=10";
 static const char col_gray1[]       = "#222222";
 static const char col_gray2[]       = "#444444";
@@ -77,18 +78,18 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_p,      spawn,          {.v = rofi_cmd } },
 	{ ControlMask,								 	XK_dollar, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
-	{ MODKEY,                       XK_u,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_h,      focusstack,     {.i = -1 } },
+	{ MODKEY,                       XK_h,      focusstack,     {.i = +1 } },
+	{ MODKEY,                       XK_u,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_e,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_t,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_semicolon,setmfact,     {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY,                       XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
-	{ ControlMask,                  XK_n,      killclient,     {0} },
-	{ MODKEY,                       XK_T,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY,                       XK_F,      setlayout,      {.v = &layouts[1]} },
-	{ MODKEY,                       XK_M,      setlayout,      {.v = &layouts[2]} },
+	{ ControlMask,                  XK_j,      killclient,     {0} },
+	{ MODKEY|ShiftMask,             XK_t,      setlayout,      {.v = &layouts[0]} },
+	{ MODKEY|ShiftMask,             XK_f,      setlayout,      {.v = &layouts[1]} },
+	{ MODKEY|ShiftMask,             XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
 	{ MODKEY,                       XK_g,      view,           {.ui = ~0 } },
