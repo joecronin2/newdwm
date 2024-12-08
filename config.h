@@ -70,7 +70,7 @@ static const Key keys[] = {
 	{ SUPERKEY,                     XK_k,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") },
 	{ SUPERKEY,                     XK_j,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+") },
 	{ MODKEY, XK_q, spawn, SHCMD ("rofi -show calc -modi calc -no-show-match -no-sort") },
-	{ MODKEY|ControlMask,           XK_u,      spawn,          { .v = browser_cmd } },
+	{ ControlMask,           				XK_i,      spawn,          { .v = browser_cmd } },
 	{ MODKEY,                       XK_minus,  setgaps,        {.i = -1 } },
 	{ MODKEY,                       XK_equal,  setgaps,        {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_equal,  setgaps,        {.i = 0  } },
