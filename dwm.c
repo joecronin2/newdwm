@@ -217,6 +217,7 @@ static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
+static void tile2(Monitor *m);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
 static void toggletag(const Arg *arg);
@@ -1752,12 +1753,155 @@ tile(Monitor *m)
 				my += HEIGHT(c) + m->gappx;
 		} else {
 
-
 			smh = m->mh * m->smfact;
 			if(!(nexttiled(c->next)))
 				h = (m->wh - ty) / (n - i) - m->gappx;
 			else
 				h = (m->wh - smh - ty) / (n - i) - m->gappx;
+			if(h < minwsz) {
+				c->isfloating = True;
+				XRaiseWindow(dpy, c->win);
+				resize(c, m->mx + (m->mw / 2 - WIDTH(c) / 2) + m->gappx, m->my + (m->mh / 2 - HEIGHT(c) / 2), m->ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), False);
+				ty -= HEIGHT(c) + m->gappx;
+			}
+			else
+				resize(c, m->wx + mw + m->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), False);
+			if(!(nexttiled(c->next)))
+				ty += HEIGHT(c) + smh + gappx;
+			else
+				ty += HEIGHT(c) + gappx;
+
+
+			/*h = (m->wh - ty) / (n - i) - m->gappx;*/
+			/*resize(c, m->wx + mw + m->gappx, m->wy + ty, m->ww - mw - (2*c->bw) - 2*m->gappx, h - (2*c->bw), 0);*/
+			/*if (ty + HEIGHT(c) + m->gappx < m->wh)*/
+			/*	ty += HEIGHT(c) + m->gappx;*/
+		}
+}
+
+typedef struct Dimensions {
+	int x,y;
+} Dimensions;
+
+typedef struct Node {
+	Dimensions d;
+	int split; // 0 for vertical split, 1 for horizontal
+	float ratio;
+	struct Node *l, *r; // right/left top/bottom nodes
+	Client *c; // NULL if not leaf
+} Node;
+
+
+Node* alloc_node(Dimensions d)
+{
+	Node* n = malloc(sizeof(*n));
+	n->d = d;
+	n->split = 0;
+	n->ratio = 0.5;
+	n->l = NULL;
+	n->r = NULL;
+	n->c = NULL;
+	return n;
+}
+
+void 
+create_branch(Node* n)
+{
+	Dimensions ldim;
+	Dimensions rdim;
+	if (n->split == 0)
+	{
+		ldim = (Dimensions){ n->d.x * n->ratio, n->d.y };
+		rdim =(Dimensions){ n->d.x  * (1 - n->ratio) , n->d.y } 
+	}
+	else
+{
+		ldim = (Dimensions){ n->d.x, n->d.y * n->ratio };
+		rdim = (Dimensions){ n->d.x, n->d.y * (1 - n->ratio) };
+	}
+
+
+	n->l = alloc_node(ldim);
+	n->r = alloc_node(rdim);
+	
+	// left inherits client
+	n->l->c = n->c;
+	// right spawns term
+	
+	n->r->c = spawn("alacritty");
+	
+	n->c = NULL; // parent has become a branch node
+}
+
+void
+assign_client(Node* n, Client *c)
+{
+	n->l = NULL;
+	n->r = NULL;
+	n->c = c;
+}
+
+void
+split_node(Node *n, float ratio)
+{
+	n->l = malloc(sizeof(*n));
+	n->r = malloc(sizeof(*n));
+	n->l->c = n->c; // move client to left node
+	n->c = NULL;
+}
+
+int
+update_node_dimensions(Node *n)
+{
+	// vertical split
+	// horizontal split
+	
+	if (n->l)
+}
+
+void 
+tile2(Monitor *m) 
+{
+	unsigned int i, clients_amt, h, smh, mw, my, ty;
+	Client *c;
+
+	for (clients_amt = 0, c = nexttiled(m->clients); c; c = nexttiled(c->next), clients_amt++)
+		printf("Client %d: [%s]\n", clients_amt, c->name);
+	if (clients_amt == 0)
+		return;
+
+
+	Node* root = alloc_node();
+
+	nexttiled(m->clients);
+	printf("mon x/y: %d, %d\n", m->wx, m->wy);
+	printf("mon w/h %d, %d",  m->ww, m->wh);
+	c = nexttiled(m->clients);
+	if (c)
+		resize(c, m->wx, m->wy, m->ww - (2*c->bw),m->wh - (2*c->bw),0);
+	/*resize(nexttiled(m->clients), 20, 20, 1000,1000,0);*/
+	return;
+
+
+	if (clients_amt > m->nmaster)
+		mw = m->nmaster ? m->ww * m->mfact : 0;
+	else
+		mw = m->ww - m->gappx;
+	for (i = 0, my = ty = m->gappx, c = nexttiled(m->clients); c; c = nexttiled(c->next), i++)
+			// tile master
+			if (i < m->nmaster) {
+			h = (m->wh - my) / (MIN(clients_amt, m->nmaster) - i) - m->gappx;
+			resize(c, m->wx + m->gappx, m->wy + my, mw - (2*c->bw) - m->gappx, h - (2*c->bw), 0);
+			if (my + HEIGHT(c) + m->gappx < m->wh)
+				my += HEIGHT(c) + m->gappx;
+		} else {
+
+
+			smh = m->mh * m->smfact;
+			if(!(nexttiled(c->next)))
+				h = (m->wh - ty) / (clients_amt - i) - m->gappx;
+			else
+				h = (m->wh - smh - ty) / (clients_amt - i) - m->gappx;
 			if(h < minwsz) {
 				c->isfloating = True;
 				XRaiseWindow(dpy, c->win);
