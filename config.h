@@ -69,8 +69,11 @@ static const char *browser_cmd[] = { "librewolf", NULL };
   
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ SUPERKEY,                     XK_k,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") },
-	{ SUPERKEY,                     XK_j,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+") },
+	/*{ SUPERKEY,                     XK_k,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") },*/
+	/*{ SUPERKEY,                     XK_j,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+") },*/
+	{ SUPERKEY,                     XK_k,      spawn,          SHCMD("pactl set-sink-volume alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y79Y5F416098C2-00.HiFi__Line1__sink -5%") },
+	{ SUPERKEY,                     XK_j,      spawn,          SHCMD("pactl set-sink-volume alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y79Y5F416098C2-00.HiFi__Line1__sink +5%") },
+	
 	{ MODKEY, XK_q, spawn, SHCMD ("rofi -show calc -modi calc -no-show-match -no-sort") },
 	{ ControlMask,           				XK_i,      spawn,          { .v = browser_cmd } },
 	{ MODKEY,                       XK_minus,  setgaps,        {.i = -1 } },
