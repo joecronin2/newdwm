@@ -1,0 +1,3 @@
+# .clang-format file
+BasedOnStyle: GNU
+AllowShortIfStatementsOnASingleLine: true
