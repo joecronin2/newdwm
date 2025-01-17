@@ -30,6 +30,7 @@
 #include <locale.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -159,6 +160,15 @@ typedef struct
   void (*arrange) (Monitor *);
 } Layout;
 
+typedef struct Node
+{
+  bool hsplit; // 0 for vertical split, 1 for horizontal
+  float ratio;
+  struct Node *l, *r; // right/left top/bottom nodes
+  int x, y, w, h;
+  Client *c; // NULL if not leaf
+} Node;
+
 struct Monitor
 {
   char ltsymbol[16];
@@ -178,6 +188,7 @@ struct Monitor
   Client *clients;
   Client *sel;
   Client *stack;
+  Node *btree;
   Monitor *next;
   Window barwin;
   const Layout *lt[2];
@@ -1910,26 +1921,11 @@ tile (Monitor *m)
       }
 }
 
-typedef struct Dimensions
-{
-  int x, y;
-} Dimensions;
-
-typedef struct Node
-{
-  Dimensions d;
-  int split; // 0 for vertical split, 1 for horizontal
-  float ratio;
-  struct Node *l, *r; // right/left top/bottom nodes
-  Client *c;          // NULL if not leaf
-} Node;
-
 Node *
-alloc_node (Dimensions d)
+alloc_node ()
 {
   Node *n = malloc (sizeof (*n));
-  n->d = d;
-  n->split = 0;
+  n->hsplit = 0;
   n->ratio = 0.5;
   n->l = NULL;
   n->r = NULL;
@@ -1938,57 +1934,76 @@ alloc_node (Dimensions d)
 }
 
 void
-create_branch (Node *n)
+update_dimensions (Node *n)
 {
-  Dimensions ldim;
-  Dimensions rdim;
-  if (n->split == 0)
+  if (n->hsplit == 0)
     {
-      ldim = (Dimensions){ n->d.x * n->ratio, n->d.y };
-      rdim = (Dimensions){ n->d.x * (1 - n->ratio), n->d.y };
+      n->l->x = n->x;
+      n->l->y = n->y;
+      n->l->w = n->w * n->ratio;
+      n->l->h = n->h;
+
+      n->r->x = n->x + (n->w * n->ratio);
+      n->r->y = n->y;
+      n->r->w = n->w * (1 - n->ratio);
+      n->r->h = n->h;
     }
   else
     {
-      ldim = (Dimensions){ n->d.x, n->d.y * n->ratio };
-      rdim = (Dimensions){ n->d.x, n->d.y * (1 - n->ratio) };
+      n->l->x = n->x;
+      n->l->y = n->y;
+      n->l->w = n->w;
+      n->l->h = n->h * n->ratio;
+
+      n->r->x = n->x;
+      n->r->y = n->y + (n->h * n->ratio);
+      n->r->w = n->w;
+      n->r->h = n->h * (1 - n->ratio);
     }
-
-  n->l = alloc_node (ldim);
-  n->r = alloc_node (rdim);
-
-  // left inherits client
-  n->l->c = n->c;
-  // right spawns term
-
-  /*n->r->c = spawn("alacritty");*/
-
-  n->c = NULL; // parent has become a branch node
 }
 
 void
-assign_client (Node *n, Client *c)
+recurse_update_dimensions (Node *root)
 {
-  n->l = NULL;
-  n->r = NULL;
-  n->c = c;
+  if (root->l && root->r)
+    {
+      update_dimensions (root->l);
+      update_dimensions (root->r);
+    }
 }
 
 void
-split_node (Node *n, float ratio)
+split_node (Node *n, Client *c)
 {
-  n->l = malloc (sizeof (*n));
-  n->r = malloc (sizeof (*n));
-  n->l->c = n->c; // move client to left node
-  n->c = NULL;
+  if (!n->c) return; // branch node
+
+  n->l = alloc_node ();
+  n->r = alloc_node ();
+
+  update_dimensions (n);
+
+  n->l->c = n->c; // left inherits client
+  n->r->c = c;
+
+  n->c = NULL; // parent is now a branch node
 }
 
-int
-update_node_dimensions (Node *n)
+void
+resize_tree (Node *n)
 {
-  // vertical split
-  // horizontal split
-
-  if (n->l) }
+  if (!n) return;
+  if (n->c)
+    {
+      int gap = 8;
+      int x = n->x + gap;
+      int y = n->y + gap;
+      int w = n->w - (gap * 2) - (n->c->bw * 2);
+      int h = n->h - (gap * 2) - (n->c->bw * 2);
+      resize (n->c, x, y, w, h, 0);
+    }
+  resize_tree (n->l);
+  resize_tree (n->r);
+}
 
 void
 tile2 (Monitor *m)
@@ -2001,8 +2016,27 @@ tile2 (Monitor *m)
     printf ("Client %d: [%s]\n", clients_amt, c->name);
   if (clients_amt == 0) return;
 
-  Node *root = alloc_node ();
+  if (!m->btree) m->btree = alloc_node ();
+  m->btree->x = m->wx;
+  m->btree->y = m->wy;
+  m->btree->w = m->ww;
+  m->btree->h = m->wh;
+  m->btree->hsplit = 1;
 
+  Node *n = m->btree;
+  for (c = m->clients; c; c = c->next)
+    {
+      if (!n->c)
+        {
+          m->btree->c = c;
+          continue;
+        }
+      split_node (n, c);
+      n = n->l;
+    }
+  resize_tree (m->btree);
+
+  return;
   nexttiled (m->clients);
   printf ("mon x/y: %d, %d\n", m->wx, m->wy);
   printf ("mon w/h %d, %d", m->ww, m->wh);
