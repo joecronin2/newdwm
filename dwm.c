@@ -162,6 +162,9 @@ typedef struct
 
 typedef struct Node
 {
+  // Node rules:
+  // Leaf nodes have a client, and no l/r
+  // Branch nodes have no client, and have both l and r
   bool hsplit; // 0 for vertical split, 1 for horizontal
   float ratio;
   struct Node *l, *r; // right/left top/bottom nodes
@@ -188,7 +191,7 @@ struct Monitor
   Client *clients;
   Client *sel;
   Client *stack;
-  Node *btree;
+  Node *btrees[10]; // TODO: hardcode
   Monitor *next;
   Window barwin;
   const Layout *lt[2];
@@ -237,6 +240,7 @@ static Atom getatomprop (Client *c, Atom prop);
 static int getrootptr (int *x, int *y);
 static long getstate (Window w);
 static int gettextprop (Window w, Atom atom, char *text, unsigned int size);
+static Node **get_current_btree ();
 static void grabbuttons (Client *c, int focused);
 static void grabkeys (void);
 static void incnmaster (const Arg *arg);
@@ -307,6 +311,11 @@ void adjust_brightness (const Arg *arg);  // int
 void set_volume (int percentage);
 void adjust_volume (const Arg *arg);
 void trippy (const Arg *arg);
+
+static bool is_branch (Node *n);
+static Node *create_root (Client *c);
+static Node *push_node (Node *root, Client *c);
+static Node *alloc_node ();
 
 /* variables */
 static const char broken[] = "broken";
@@ -481,6 +490,22 @@ attach (Client *c)
 {
   c->next = c->mon->clients;
   c->mon->clients = c;
+}
+
+void
+btree_attach (Client *c)
+{
+  Monitor *m = selmon;
+  Node **tree = get_current_btree ();
+  if (*tree)
+    {
+      *tree = push_node (*tree, c);
+      return;
+    }
+  else
+    {
+      *tree = create_root (c);
+    }
 }
 
 void
@@ -1204,6 +1229,7 @@ manage (Window w, XWindowAttributes *wa)
   if (c->isfloating) XRaiseWindow (dpy, c->win);
   attach (c);
   attachstack (c);
+  btree_attach (c);
   XChangeProperty (dpy, root, netatom[NetClientList], XA_WINDOW, 32,
                    PropModeAppend, (unsigned char *)&(c->win), 1);
   XMoveResizeWindow (dpy, c->win, c->x + 2 * sw, c->y, c->w,
@@ -1933,43 +1959,55 @@ alloc_node ()
   return n;
 }
 
+// updates dimensions of child nodes in branch
 void
 update_dimensions (Node *n)
 {
+  if (n->c) return; // leaf node means l and r are null
+  Node *l = n->l;
+  Node *r = n->r;
   if (n->hsplit == 0)
     {
-      n->l->x = n->x;
-      n->l->y = n->y;
-      n->l->w = n->w * n->ratio;
-      n->l->h = n->h;
+      l->x = n->x;
+      l->y = n->y;
+      l->w = n->w * n->ratio;
+      l->h = n->h;
 
-      n->r->x = n->x + (n->w * n->ratio);
-      n->r->y = n->y;
-      n->r->w = n->w * (1 - n->ratio);
-      n->r->h = n->h;
+      r->x = n->x + (n->w * n->ratio);
+      r->y = n->y;
+      r->w = n->w * (1 - n->ratio);
+      r->h = n->h;
     }
   else
     {
-      n->l->x = n->x;
-      n->l->y = n->y;
-      n->l->w = n->w;
-      n->l->h = n->h * n->ratio;
+      l->x = n->x;
+      l->y = n->y;
+      l->w = n->w;
+      l->h = n->h * n->ratio;
 
-      n->r->x = n->x;
-      n->r->y = n->y + (n->h * n->ratio);
-      n->r->w = n->w;
-      n->r->h = n->h * (1 - n->ratio);
+      r->x = n->x;
+      r->y = n->y + (n->h * n->ratio);
+      r->w = n->w;
+      r->h = n->h * (1 - n->ratio);
     }
 }
 
 void
 recurse_update_dimensions (Node *root)
 {
+  update_dimensions (root);
   if (root->l && root->r)
     {
-      update_dimensions (root->l);
-      update_dimensions (root->r);
+      recurse_update_dimensions (root->l);
+      recurse_update_dimensions (root->r);
     }
+}
+
+Node *
+get_first_leaf (Node *n)
+{
+  if (n->c) return n;
+  return get_first_leaf (n->l);
 }
 
 void
@@ -1979,7 +2017,6 @@ split_node (Node *n, Client *c)
 
   n->l = alloc_node ();
   n->r = alloc_node ();
-
   update_dimensions (n);
 
   n->l->c = n->c; // left inherits client
@@ -2005,6 +2042,45 @@ resize_tree (Node *n)
   resize_tree (n->r);
 }
 
+Node *
+create_root (Client *c)
+{
+  Node *n = alloc_node ();
+  n->c = c;
+  n->x = c->mon->wx;
+  n->y = c->mon->wy;
+  n->w = c->mon->ww;
+  n->h = c->mon->wh;
+  n->hsplit = 0;
+}
+
+bool
+is_branch (Node *n)
+{
+  return n->c == NULL;
+}
+
+// inserts new node to top of tree, returns new root
+Node *
+push_node (Node *root, Client *c)
+{
+  Node *new_root = create_root (c);
+  new_root->l = root;
+  new_root->r = alloc_node ();
+  new_root->r->c = c;
+  new_root->c = NULL;
+  /*n->c = NULL; // now branch node*/
+  recurse_update_dimensions (new_root);
+  return new_root;
+}
+
+Node **
+get_current_btree ()
+{
+  unsigned int tags = selmon->tagset[selmon->seltags];
+  return &selmon->btrees[ffs (tags)];
+}
+
 void
 tile2 (Monitor *m)
 {
@@ -2016,25 +2092,10 @@ tile2 (Monitor *m)
     printf ("Client %d: [%s]\n", clients_amt, c->name);
   if (clients_amt == 0) return;
 
-  if (!m->btree) m->btree = alloc_node ();
-  m->btree->x = m->wx;
-  m->btree->y = m->wy;
-  m->btree->w = m->ww;
-  m->btree->h = m->wh;
-  m->btree->hsplit = 1;
-
-  Node *n = m->btree;
-  for (c = m->clients; c; c = c->next)
-    {
-      if (!n->c)
-        {
-          m->btree->c = c;
-          continue;
-        }
-      split_node (n, c);
-      n = n->l;
-    }
-  resize_tree (m->btree);
+  // resize for current tree
+  Node **n = get_current_btree ();
+  if (*n) resize_tree (*n);
+  return;
 
   return;
   nexttiled (m->clients);
