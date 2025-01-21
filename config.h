@@ -53,11 +53,17 @@ static const Layout layouts[] = {
 #define MODKEY Mod1Mask
 #define SUPERKEY Mod4Mask
 #define TAGKEYS(KEY,TAG) \
-	{ ControlMask,                       KEY,      view,           {.ui = 1 << TAG} }, \
-	{ MODKEY|ShiftMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
-	{ SUPERKEY|ControlMask, KEY,      toggletag,      {.ui = 1 << TAG} },
+  &((Keychord){1, {{ControlMask, KEY}}, view,{.ui = 1 << TAG} }), \
+  &((Keychord){1, {{MODKEY|ShiftMask, KEY}}, toggleview,     {.ui = 1 << TAG} }), \
+  &((Keychord){1, {{MODKEY|ControlMask, KEY}}, tag,     {.ui = 1 << TAG} }), \
+  &((Keychord){1, {{SUPERKEY|ControlMask, KEY}}, toggletag,     {.ui = 1 << TAG} }), \
 
+/*#define TAGKEYS(KEY,TAG)                                                                                               \*/
+/*       &((Keychord){1, {{MODKEY, KEY}},                              view,           {.ui = 1 << TAG} }), \*/
+/*       &((Keychord){1, {{MODKEY|ControlMask, KEY}},                   toggleview,     {.ui = 1 << TAG} }), \*/
+/*       &((Keychord){1, {{MODKEY|ShiftMask, KEY}},                       tag,            {.ui = 1 << TAG} }), \*/
+/*       &((Keychord){1, {{MODKEY|ControlMask|ShiftMask, KEY}},         toggletag,      {.ui = 1 << TAG} }),*/
+/**/
 /* helper for spawning shell commands in the pre dwm-5.0 fashion */
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
@@ -68,50 +74,50 @@ static const char *termcmd[]  = { "alacritty", NULL };
 static const char *rofi_cmd[] = { "rofi", "-show", "drun" };
 static const char *browser_cmd[] = { "librewolf", NULL };
   
-static const Key keys[] = {
+/*static const Key keys[] = {*/
+static Keychord *keychords[] = {
 	/* modifier                     key        function        argument */
 	/*{ SUPERKEY,                     XK_k,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-") },*/
 	/*{ SUPERKEY,                     XK_j,      spawn,          SHCMD("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+") },*/
-	{ SUPERKEY,                     XK_k,      spawn,          SHCMD("pactl set-sink-volume alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y79Y5F416098C2-00.HiFi__Line1__sink -5%") },
-	{ SUPERKEY,                     XK_j,      spawn,          SHCMD("pactl set-sink-volume alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y79Y5F416098C2-00.HiFi__Line1__sink +5%") },
-	
-	{ MODKEY, XK_q, spawn, SHCMD ("rofi -show calc -modi calc -no-show-match -no-sort") },
-	{ ControlMask,           				XK_i,      spawn,          { .v = browser_cmd } },
-	{ MODKEY,                       XK_minus,  setgaps,        {.i = -1 } },
-	{ MODKEY,                       XK_equal,  setgaps,        {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_equal,  setgaps,        {.i = 0  } },
-	{ MODKEY|ShiftMask|ControlMask, XK_t,      trippy,         { 0 } },
-	{ MODKEY|ControlMask, 					XK_o,      adjust_temperature,       {.i = 50 } },
-	{ MODKEY|ControlMask, 					XK_a, 		 adjust_temperature, { .i = -(50) } },
-  { MODKEY|ControlMask|ShiftMask, XK_o, 		 adjust_brightness, { .i = 3 } },
-  { MODKEY|ControlMask|ShiftMask, XK_a, 		 adjust_brightness, { .i = -(3) } },
-	{ MODKEY|ShiftMask,             XK_h,      setsmfact,      {.f = +0.05} },
-	{ MODKEY|ShiftMask,             XK_l,      setsmfact,      {.f = -0.05} },
-
-	{ MODKEY,                       XK_p,      spawn,          {.v = rofi_cmd } },
-	{ ControlMask,								 	XK_dollar, spawn,          {.v = termcmd } },
-	{ MODKEY,                       XK_b,      togglebar,      {0} },
-	{ MODKEY,                       XK_h,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_u,      focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_e,      incnmaster,     {.i = +1 } },
-	{ MODKEY,                       XK_t,      incnmaster,     {.i = -1 } },
-	{ MODKEY,                       XK_semicolon,setmfact,     {.f = -0.05} },
-	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
-	{ MODKEY,                       XK_Return, zoom,           {0} },
-	{ MODKEY,                       XK_Tab,    view,           {0} },
-	{ ControlMask,                  XK_j,      killclient,     {0} },
-	{ MODKEY|ShiftMask,             XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY|ShiftMask,             XK_f,      setlayout,      {.v = &layouts[1]} },
-	{ MODKEY|ShiftMask,             XK_m,      setlayout,      {.v = &layouts[2]} },
-	{ MODKEY|ShiftMask,             XK_n,      setlayout,      {.v = &layouts[3]} },
-	{ MODKEY,                       XK_space,  setlayout,      {0} },
-	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
-	{ MODKEY,                       XK_g,      view,           {.ui = ~0 } },
-	{ MODKEY|ShiftMask,             XK_g,      tag,            {.ui = ~0 } },
-	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
-	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
+	&((Keychord){1, {{ SUPERKEY,                     XK_k}},      spawn,          SHCMD("pactl set-sink-volume alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y79Y5F416098C2-00.HiFi__Line1__sink -5%") }),
+	&((Keychord){1, {{ SUPERKEY,                     XK_j}},      spawn,          SHCMD("pactl set-sink-volume alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y79Y5F416098C2-00.HiFi__Line1__sink +5%") }),
+	&((Keychord){1, {{ MODKEY, XK_q}}, spawn, SHCMD ("rofi -show calc -modi calc -no-show-match -no-sort") }),
+	&((Keychord){1, {{ ControlMask,           				XK_i}},      spawn,          { .v = browser_cmd } }),
+	&((Keychord){1, {{ MODKEY,                       XK_minus}},  setgaps,        {.i = -1 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_equal}},  setgaps,        {.i = +1 } }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_equal}},  setgaps,        {.i = 0  } }),
+	&((Keychord){1, {{ MODKEY|ShiftMask|ControlMask, XK_t}},      trippy,         { 0 } }),
+	&((Keychord){1, {{ MODKEY|ControlMask, 					XK_o}},      adjust_temperature,       {.i = 50 } }),
+	&((Keychord){1, {{ MODKEY|ControlMask, 					XK_a}}, 		 adjust_temperature, { .i = -(50) } }),
+  &((Keychord){1, {{ MODKEY|ControlMask|ShiftMask, XK_o}}, 		 adjust_brightness, { .i = 3 } }),
+  &((Keychord){1, {{ MODKEY|ControlMask|ShiftMask, XK_a}}, 		 adjust_brightness, { .i = -(3) } }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_h}},      setsmfact,      {.f = +0.05} }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_l}},      setsmfact,      {.f = -0.05} }),
+	&((Keychord){1, {{ MODKEY,                       XK_p}},      spawn,          {.v = rofi_cmd } }),
+	&((Keychord){1, {{ ControlMask,								 	XK_dollar}}, spawn,          {.v = termcmd } }),
+	&((Keychord){1, {{ MODKEY,                       XK_b}},      togglebar,      {0} }),
+	&((Keychord){1, {{ MODKEY,                       XK_h}},      focusstack,     {.i = +1 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_u}},      focusstack,     {.i = -1 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_e}},      incnmaster,     {.i = +1 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_t}},      incnmaster,     {.i = -1 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_semicolon}},setmfact,     {.f = -0.05} }),
+	&((Keychord){1, {{ MODKEY,                       XK_l}},      setmfact,       {.f = +0.05} }),
+	&((Keychord){1, {{ MODKEY,                       XK_Return}}, zoom,           {0} }),
+	&((Keychord){1, {{ MODKEY,                       XK_Tab}},    view,           {0} }),
+	&((Keychord){1, {{ ControlMask,                  XK_j}},      killclient,     {0} }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_t}},      setlayout,      {.v = &layouts[0]} }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_f}},      setlayout,      {.v = &layouts[1]} }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_m}},      setlayout,      {.v = &layouts[2]} }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_n}},      setlayout,      {.v = &layouts[3]} }),
+	&((Keychord){1, {{ MODKEY,                       XK_space}},  setlayout,      {0} }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_space}},  togglefloating, {0} }),
+	&((Keychord){1, {{ MODKEY,                       XK_g}},      view,           {.ui = ~0 } }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_g}},      tag,            {.ui = ~0 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_comma}},  focusmon,       {.i = -1 } }),
+	&((Keychord){1, {{ MODKEY,                       XK_period}}, focusmon,       {.i = +1 } }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_comma}},  tagmon,         {.i = -1 } }),
+	&((Keychord){1, {{ MODKEY|ShiftMask,             XK_period}}, tagmon,         {.i = +1 } }),
+  &((Keychord){1, {{MODKEY|ShiftMask, XK_q}},                             quit,           {0} }),
 	TAGKEYS(                        XK_equal,                  0)
 	TAGKEYS(                        XK_parenleft,              1)
 	TAGKEYS(                        XK_braceleft,              2)
@@ -122,7 +128,7 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_period,                 7)
 	TAGKEYS(                        XK_p,                      8)
 	TAGKEYS(                        XK_y,                      9)
-	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
+	/*{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },*/
 };
 
 /* button definitions */
