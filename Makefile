@@ -19,6 +19,9 @@ config.h:
 dwm: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+debug: all
+	gdb -x .gdbinit dwm
+
 clean:
 	rm -f dwm ${OBJ} dwm-${VERSION}.tar.gz
 
