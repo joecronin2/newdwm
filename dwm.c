@@ -144,6 +144,7 @@ struct Client
   Client *snext;
   Monitor *mon;
   Window win;
+  struct Node *n;
 };
 
 typedef struct
@@ -176,7 +177,8 @@ typedef struct Node
   float ratio;
   struct Node *l, *r; // right/left top/bottom nodes
   int x, y, w, h;
-  Client *c; // NULL if not leaf
+  Client *c;           // NULL if not leaf
+  struct Node *parent; // NULL if root
 } Node;
 
 struct Monitor
@@ -319,6 +321,8 @@ void set_volume (int percentage);
 void adjust_volume (const Arg *arg);
 void trippy (const Arg *arg);
 
+static void btree_attach (Client *c);
+static void btree_detach (Client *c);
 static bool is_branch (Node *n);
 static Node *create_root (Client *c);
 static Node *push_node (Node *root, Client *c);
@@ -498,22 +502,6 @@ attach (Client *c)
 {
   c->next = c->mon->clients;
   c->mon->clients = c;
-}
-
-void
-btree_attach (Client *c)
-{
-  Monitor *m = selmon;
-  Node **tree = get_current_btree ();
-  if (*tree)
-    {
-      *tree = push_node (*tree, c);
-      return;
-    }
-  else
-    {
-      *tree = create_root (c);
-    }
 }
 
 void
@@ -2071,6 +2059,8 @@ split_node (Node *n, Client *c)
 
   n->l = alloc_node ();
   n->r = alloc_node ();
+  n->l->parent = n;
+  n->r->parent = n;
   update_dimensions (n);
 
   n->l->c = n->c; // left inherits client
@@ -2100,6 +2090,7 @@ Node *
 create_root (Client *c)
 {
   Node *n = alloc_node ();
+  n->parent = NULL;
   n->c = c;
   n->x = c->mon->wx;
   n->y = c->mon->wy;
@@ -2120,7 +2111,9 @@ push_node (Node *root, Client *c)
 {
   Node *new_root = create_root (c);
   new_root->l = root;
+  new_root->l->parent = new_root;
   new_root->r = alloc_node ();
+  new_root->r->parent = new_root;
   new_root->r->c = c;
   new_root->c = NULL;
   /*n->c = NULL; // now branch node*/
@@ -2128,11 +2121,71 @@ push_node (Node *root, Client *c)
   return new_root;
 }
 
+// left node deletion:
+//     p
+//    / \
+//   n  b
+//  / \/ \
+// 0  00 0
+
+//     n
+//    / \
+//   0  0
+
+// right node deletion:
+//     p
+//    / \
+//   b  n
+//  / \/ \
+
+//     p
+//    / \
+//   b  n
+//  / \/ \
+
+Node *
+del_leaf (Node *n)
+{
+  Node *p = n->parent;
+	// parent becomes leaf node (n), 
+	// 
+  if (p->l == n)
+    { // left node
+			//
+    }
+  else if (p->r == n)
+    { // right node
+    }
+}
+
 Node **
 get_current_btree ()
 {
   unsigned int tags = selmon->tagset[selmon->seltags];
   return &selmon->btrees[ffs (tags)];
+}
+
+void
+btree_attach (Client *c)
+{
+  Monitor *m = selmon;
+  Node **tree = get_current_btree ();
+  if (*tree)
+    {
+      *tree = push_node (*tree, c);
+      return;
+    }
+  else
+    {
+      *tree = create_root (c);
+    }
+  c->n = *tree;
+}
+
+void
+btree_detach (Client *c)
+{
+  Node **n = get_current_btree ();
 }
 
 void
@@ -2282,6 +2335,7 @@ unmanage (Client *c, int destroyed)
 
   detach (c);
   detachstack (c);
+  btree_detach (c);
   if (!destroyed)
     {
       wc.border_width = c->oldbw;
