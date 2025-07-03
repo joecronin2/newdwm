@@ -20,6 +20,10 @@
  *
  * To understand everything else, start reading main().
  */
+
+#include <math.h>
+#include <X11/extensions/Xrandr.h>
+
 #include <errno.h>
 #include <locale.h>
 #include <signal.h>
@@ -236,6 +240,14 @@ static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
+void set_temperature (int temp, int brightness_percentage);
+void adjust_temperature (const Arg *arg); // int
+void adjust_brightness (const Arg *arg);  // int
+void set_volume (int percentage);
+void adjust_volume (const Arg *arg);
+void trippy (const Arg *arg);
+
+
 /* variables */
 static const char broken[] = "broken";
 static char stext[256];
@@ -272,6 +284,10 @@ static Window root, wmcheckwin;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
+
+static int temperature = 7000;
+// percentage
+static int brightness = 100;
 
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
@@ -2153,6 +2169,137 @@ zoom(const Arg *arg)
 		return;
 	pop(c);
 }
+
+#define TEMPERATURE_NORM 6500
+#define TEMPERATURE_NIGHT 4500
+#define TEMPERATURE_ZERO 700
+#define GAMMA_MULT 65535.0
+// Approximation of the `redshift` table from
+// https://github.com/jonls/redshift/blob/04760afe31bff5b26cf18fe51606e7bdeac15504/src/colorramp.c#L30-L273
+// without limits:
+// GAMMA = K0 + K1 * ln(T - T0)
+// Red range (T0 = TEMPERATURE_ZERO)
+// Green color
+#define GAMMA_K0GR -1.47751309139817
+#define GAMMA_K1GR 0.28590164772055
+// Blue color
+#define GAMMA_K0BR -4.38321650114872
+#define GAMMA_K1BR 0.6212158769447
+// Blue range  (T0 = TEMPERATURE_NORM - TEMPERATURE_ZERO)
+// Red color
+#define GAMMA_K0RB 1.75390204039018
+#define GAMMA_K1RB -0.1150805671482
+// Green color
+#define GAMMA_K0GB 1.49221604915144
+#define GAMMA_K1GB -0.07513509588921
+#define BRIGHTHESS_DIV 65470.988
+#define DELTA_MIN -1000000
+
+// limits input to lower and higher bounds
+double
+trim_double (double input, double low, double high)
+{
+  if (input > high) return high;
+  if (input < low) return low;
+  return input;
+}
+
+void
+set_temperature (int temp, int brightness_percentage)
+{
+  double gamma_red, gamma_green, gamma_blue;
+  XRRScreenResources *curr_screen_resources
+      = XRRGetScreenResourcesCurrent (dpy, root);
+  if (curr_screen_resources == NULL)
+    die ("XRRGetScreenResourcesCurrent error");
+
+  // make sure brightness in range of 0 and 1
+  // convert brightness from 0-100 to 0.00-1.00
+  double brightness = (double)brightness_percentage / 100;
+  // calculate gamma dynamically
+  if (temperature < TEMPERATURE_NORM)
+    {
+      gamma_red = 1.0;
+      if (temperature > TEMPERATURE_ZERO)
+        {
+          const double g = log (temperature - TEMPERATURE_ZERO);
+          gamma_green = trim_double (GAMMA_K0GR + GAMMA_K1GR * g, 0.0, 1.0);
+          gamma_blue = trim_double (GAMMA_K0BR + GAMMA_K1BR * g, 0.0, 1.0);
+        }
+      else
+        {
+          gamma_green = 0.0;
+          gamma_blue = 0.0;
+        }
+    }
+  else
+    {
+      const double g
+          = log (temperature - (TEMPERATURE_NORM - TEMPERATURE_ZERO));
+      gamma_red = trim_double (GAMMA_K0RB + GAMMA_K1RB * g, 0.0, 1.0);
+      gamma_green = trim_double (GAMMA_K0GB + GAMMA_K1GB * g, 0.0, 1.0);
+      gamma_blue = 1.0;
+    }
+
+  int crtc_amt = curr_screen_resources->ncrtc;
+  for (int i = 0; i < crtc_amt; i++)
+    {
+      RRCrtc crtcxid = curr_screen_resources->crtcs[i];
+      int crtc_gamma_size = XRRGetCrtcGammaSize (dpy, crtcxid);
+      if (crtc_gamma_size == 0)
+        continue; // if zero, the crtc is likely inactive, and we can continue
+
+      XRRCrtcGamma *crtc_gamma = XRRAllocGamma (crtc_gamma_size);
+
+      for (int i = 0; i < crtc_gamma_size; i++)
+        {
+          const double g
+              = GAMMA_MULT * brightness * (double)i / (double)crtc_gamma_size;
+          crtc_gamma->red[i] = (unsigned short int)(g * gamma_red + 0.5);
+          crtc_gamma->green[i] = (unsigned short int)(g * gamma_green + 0.5);
+          crtc_gamma->blue[i] = (unsigned short int)(g * gamma_blue + 0.5);
+        }
+
+      XRRSetCrtcGamma (dpy, crtcxid, crtc_gamma);
+      XRRFreeGamma (crtc_gamma);
+    }
+
+  XFree (curr_screen_resources);
+}
+
+void
+adjust_temperature (const Arg *arg)
+{
+  temperature += arg->i;
+  set_temperature (temperature, brightness);
+}
+
+void
+adjust_brightness (const Arg *arg)
+{
+  brightness += arg->i;
+  set_temperature (temperature, brightness);
+}
+
+// 😎😎😎
+void
+trippy (const Arg *arg)
+{
+  int old_brightness = brightness;
+  const double duration = 50;
+  const double interval = 0.05;
+  const int adjustment = 15;
+
+  const int iterations = duration / interval;
+  for (int i = 0; i < iterations; i++)
+    {
+      adjust_brightness ((const Arg *)&adjustment);
+      sleep (interval);
+    }
+  brightness = old_brightness;
+  set_temperature (temperature, old_brightness);
+}
+
 
 int
 main(int argc, char *argv[])
