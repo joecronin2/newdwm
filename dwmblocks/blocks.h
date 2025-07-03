@@ -4,6 +4,7 @@ static const Block blocks[] = {
 	{"", "free --mebi | awk '/^Mem/ { print $3 }' ",	3,		0},
 	{"", "~/scripts/get_weather.sh",	3600,		0},
 	{"", "cat /proc/loadavg | cut -d' ' -f1,2,3",	1,		0},
+	{"", "cat /sys/class/power_supply/BAT1/capacity",	10,		0},
 
 	{"", "date '+%b %d (%a) %I:%M%p'",					5,		0},
 };
