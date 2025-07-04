@@ -53,7 +53,6 @@ static void (*writestatus) () = pstdout;
 static char statusbar[LENGTH(blocks)][CMDLENGTH] = {0};
 static char statusstr[2][STATUSLENGTH];
 static int statusContinue = 1;
-static int returnStatus = 0;
 
 //opens process *cmd and stores output in *output
 void getcmd(const Block *block, char *output)
@@ -65,7 +64,8 @@ void getcmd(const Block *block, char *output)
 	if (!cmdf)
 		return;
 	int i = strlen(block->icon);
-	fgets(tempstatus+i, CMDLENGTH-i-delimLen, cmdf);
+	if (!fgets(tempstatus+i, CMDLENGTH-i-delimLen, cmdf))
+		fprintf(stderr, "fgets failed");
 	i = strlen(tempstatus);
 	//if block and command output are both not empty
 	if (i != 0) {
