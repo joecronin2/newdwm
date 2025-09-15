@@ -75,7 +75,7 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_comma,  focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_r,      focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_period, incnmaster,     {.i = +1 } },
+	{ MODKEY,                       XK_f, incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_g,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_semicolon,setmfact,     {.f = -0.05} },
 	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
@@ -105,6 +105,7 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_s,                      9)
 	{ MODKEY|ShiftMask,             XK_q,      quit,           {0} },
 
+	{ SUPERKEY, 										XK_a,      trippy,       {0} },
 	{ SUPERKEY, 										XK_e,      adjust_temperature,       {.i = 50 } },
 	{ SUPERKEY, 										XK_o, 		 adjust_temperature, { .i = -(50) } },
 	{ SUPERKEY|ShiftMask, 					XK_e, 		 adjust_brightness, { .i = 3 } },
